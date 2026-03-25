@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'transfer_screen.dart';
 import 'geocoding_helper.dart'; 
-import 'espera_vip_screen.dart'; // <--- 1. IMPORTEM LA NOVA PANTALLA
+import 'espera_vip_screen.dart'; 
 
 class ResumReservaScreen extends StatefulWidget {
   final Map<String, dynamic>? dades; 
@@ -42,75 +42,74 @@ class _ResumReservaScreenState extends State<ResumReservaScreen> {
     }
   }
 
-// Dins de lib/resum_reserva_screen.dart, substitueix la funció _guardarReserva
-
-Future<void> _guardarReserva() async {
-  // Verificació metòdica de dades
-  if (_nomController.text.isEmpty || _cpController.text.length < 5) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Dades incompletes per a la reserva")),
-    );
-    return;
-  }
-
-  // Mostrem l'indicador de càrrega (pau visual per al client)
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF700A))),
-  );
-
-  try {
-    // 1. CREEM EL PAQUET DE DADES CORRECTE PER AL RADAR
-    // Canviem 'nom_client' per 'welcome_sign' i afegim 'creat_el'
-  final dadesFinals = {
-  'welcome_sign': _nomController.text, // Perquè el xòfer vegi el nom
-  'email': _emailController.text,
-  'adreca_recollida': _adrecaController.text,
-  'cp': _cpController.text,
-  'poblacio': _poblacio,
-  'provincia': _provincia,
-  'vol_tren': widget.dades?['vol_tren'] ?? "---",
-  'desti': widget.dades?['desti'] ?? "---",
-  'hora': widget.dades?['hora'] ?? "---",
-  'estat': 'PENDENT', // <--- AIXÒ ÉS EL QUE EL RADAR BUSCA
-  'creat_el': FieldValue.serverTimestamp(), // <--- PER ORDRE CRONOLÒGIC
-};
-    // 2. ENVIEM A FIREBASE
-    await FirebaseFirestore.instance.collection('reserves').add(dadesFinals);
-
-    if (!mounted) return;
-    Navigator.pop(context); // Tanquem el diàleg de càrrega
-
-    // Missatge de confirmació d'èxit
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("✅ RESERVA REGISTRADA I ENVIADA AL XÒFER"),
-        backgroundColor: Color(0xFF2D3142),
-      ),
-    );
-
-    // 3. SALT A LA PANTALLA D'ESPERA
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      // Naveguem a la pantalla d'espera i netegem la pila per no poder tornar enrere
-      Navigator.pushReplacement(
-        context, 
-        MaterialPageRoute(
-          builder: (context) => EsperaVipScreen(dades: dadesFinals)
-        )
+  Future<void> _guardarReserva() async {
+    // Verificació metòdica de dades
+    if (_nomController.text.isEmpty || _cpController.text.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Dades incompletes per a la reserva")),
       );
-    });
+      return;
+    }
 
-  } catch (e) {
-    if (!mounted) return;
-    Navigator.pop(context); // Tanquem el diàleg de càrrega
-    // Missatge d'error
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+    // Mostrem l'indicador de càrrega (pau visual per al client)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF700A))),
     );
+
+    try {
+      // 1. CREEM EL PAQUET DE DADES (Diferenciant nom del client i welcome sign)
+      final dadesFinals = {
+        'nom_client': _nomController.text, // El nom real de la persona
+        'welcome_sign': _nomController.text, // El que veurà el xòfer (per defecte el mateix)
+        'email': _emailController.text,
+        'adreca_recollida': _adrecaController.text,
+        'cp': _cpController.text,
+        'poblacio': _poblacio,
+        'provincia': _provincia,
+        'vol_tren': widget.dades?['vol_tren'] ?? "---",
+        'desti': widget.dades?['desti'] ?? "---",
+        'hora': widget.dades?['hora'] ?? "---",
+        'estat': 'PENDENT',
+        'creat_el': FieldValue.serverTimestamp(),
+      };
+
+      // 2. ENVIEM A FIREBASE
+      await FirebaseFirestore.instance.collection('reserves').add(dadesFinals);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Tanquem el diàleg de càrrega
+
+      // Missatge de confirmació d'èxit
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✅ RESERVA REGISTRADA I ENVIADA AL XÒFER"),
+          backgroundColor: Color(0xFF2D3142),
+        ),
+      );
+
+      // 3. SALT A LA PANTALLA D'ESPERA
+      // Fem servir pushAndRemoveUntil per tancar el cercle i que no torni enrere
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => EsperaVipScreen(dades: dadesFinals)
+          ),
+          (route) => false,
+        );
+      });
+
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Tanquem el diàleg de càrrega
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+      );
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -180,7 +179,6 @@ Future<void> _guardarReserva() async {
     );
   }
 
-  // Ginys de disseny omesos per brevetat (es mantenen igual que els teus)
   Widget _buildCard({required String title, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(20),
