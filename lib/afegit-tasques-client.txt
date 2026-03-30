@@ -1,0 +1,36 @@
+// --- 1. SELECCIÓ (ESTÈTICA APPLE / JAPONESA) ---
+class PantallaSeleccio extends StatelessWidget {
+  const PantallaSeleccio({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(35),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.directions_car_filled, color: Color(0xFFFF700A), size: 45),
+              const SizedBox(height: 25),
+              const Text("Benvingut a OnlyTransfer,", style: TextStyle(color: Colors.grey, fontSize: 16)),
+              const Text("Tenim per a tu tres tipus de servei,", style: TextStyle(color: Colors.grey, fontSize: 14)),
+              const Text("Tria el servei que necessitis,", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -1)),
+              const SizedBox(height: 45),
+            _cardMenu(context, "TRASLLAT", Icons.airplanemode_active),
+              
+   const Text("El servei de trasllat per exemple del Aeroport a Barcelona o de Barcelona al Aeroport es el mes habitual,", style: TextStyle(color: Colors.grey, fontSize: 14)),
+
+              _cardMenu(context, "DISPOSICIÓ", Icons.access_time),
+              
+    const Text("El servei de disposicio esta pensnt per fer tours turistics per la ciutat i per fora de la ciutat com Montserrat o les Caves Codorniu i la Colonia Güell,", style: TextStyle(color: Colors.grey, fontSize: 14)),
+
+             _cardMenu(context, "ESDEVENIMENTS", Icons.celebration),
+   
+   const Text("El servei de Esdeveniments esta pensat per un tipo de servei especial de disposicio per un temps determinat per atendre Congresos, Events esportius, Concerts,", style: TextStyle(color: Colors.grey, fontSize: 14)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
