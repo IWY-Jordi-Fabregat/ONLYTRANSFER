@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'onlytransfer-lab.firebasestorage.app',
     measurementId: 'G-5V9CB2SLF7',
   );
+
 }

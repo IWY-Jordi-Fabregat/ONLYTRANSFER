@@ -1,0 +1,22 @@
+{
+  "categories": {
+    "LUXE_VIPS": {
+      "descripcio": "Vehicles de menys de 2 anys (Classe S, BMW 7)",
+      "preu_base": 50.00,
+      "preu_km": 3.50,
+      "preu_minut": 1.20
+    },
+    "BUSINESS": {
+      "descripcio": "Vehicles de 2 a 5 anys (Classe E, Audi A6)",
+      "preu_base": 35.00,
+      "preu_km": 2.20,
+      "preu_minut": 0.80
+    },
+    "VAN_LUXE": {
+      "descripcio": "Mercedes Classe V (VIP)",
+      "preu_base": 60.00,
+      "preu_km": 4.00,
+      "preu_minut": 1.50
+    }
+  }
+}

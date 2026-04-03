@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'transfer_screen.dart'; // Import necessari per tornar al menú
-import 'resum_reserva_screen.dart'; // Import necessari per anar al resum
 
 class FormulariTransferScreen extends StatefulWidget {
-  const FormulariTransferScreen({super.key});
+  // Hem fet el resum opcional perquè el PIN 0000 pugui entrar directament
+  final Map<String, String>? resum;
+
+  const FormulariTransferScreen({super.key, this.resum});
 
   @override
   State<FormulariTransferScreen> createState() => _FormulariTransferScreenState();
@@ -37,24 +38,10 @@ class _FormulariTransferScreenState extends State<FormulariTransferScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF2D3142)),
-          onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const TransferScreen()),
-              (route) => false,
-            );
-          },
-        ),
+        iconTheme: const IconThemeData(color: Color(0xFF2D3142)),
         title: const Text(
           'DADES DEL TRANSFER',
-          style: TextStyle(
-            color: Color(0xFF2D3142), 
-            fontSize: 16, 
-            letterSpacing: 2, 
-            fontWeight: FontWeight.bold
-          ),
+          style: TextStyle(color: Color(0xFF2D3142), fontSize: 16, letterSpacing: 2, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -63,7 +50,7 @@ class _FormulariTransferScreenState extends State<FormulariTransferScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionTitle("RECOLLIDA I DESTÍ"),
-            _buildTextField(_origenController, "Origen (Aeroport, Port, Estació...)", Icons.location_on_outlined),
+            _buildTextField(_origenController, "Origen (Aeroport, Port...)", Icons.location_on_outlined),
             const SizedBox(height: 15),
             _buildTextField(_destiController, "Destí (Hotel, Adreça...)", Icons.flag_outlined),
             
@@ -104,7 +91,7 @@ class _FormulariTransferScreenState extends State<FormulariTransferScreen> {
             _buildSectionTitle("DETALLS DEL SERVEI"),
             _buildTextField(_volController, "Número de Vol / Tren", Icons.flight_takeoff),
             const SizedBox(height: 15),
-            _buildTextField(_welcomeSignController, "Welcome Sign (Nom al cartell)", Icons.badge_outlined),
+            _buildTextField(_welcomeSignController, "Nom al cartell (Welcome Sign)", Icons.badge_outlined),
 
             const SizedBox(height: 30),
             _buildSectionTitle("CAPACITAT"),
@@ -118,7 +105,7 @@ class _FormulariTransferScreenState extends State<FormulariTransferScreen> {
 
             const SizedBox(height: 30),
             _buildSectionTitle("OBSERVACIONS"),
-            _buildTextField(_observacionsController, "Coses a tenir en compte...", Icons.notes_outlined, maxLines: 3),
+            _buildTextField(_observacionsController, "Notes addicionals...", Icons.notes_outlined, maxLines: 3),
 
             const SizedBox(height: 40),
             _buildBotoSubmit(),
@@ -209,41 +196,30 @@ class _FormulariTransferScreenState extends State<FormulariTransferScreen> {
     );
 
     try {
-      await FirebaseFirestore.instance.collection('reserves').add({
-        'origen': _origenController.text,
-        'desti': _destiController.text,
-        'data': "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-        'hora': _selectedTime.format(context),
-        'vehicle': _vehicleSeleccionat,
-        'vol_tren': _volController.text,
-        'welcome_sign': _welcomeSignController.text,
-        'passatgers': _passatgersController.text,
-        'maletes': _maletesController.text,
-        'observacions': _observacionsController.text,
+      // UNIFIQUEM A LA COL·LECCIÓ 'viatges'
+      await FirebaseFirestore.instance.collection('viatges').add({
+        'CLIENT': _welcomeSignController.text.isNotEmpty ? _welcomeSignController.text : "Client VIP",
+        'O': _origenController.text,
+        'D': _destiController.text,
+        'DATA': "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+        'HORA': _selectedTime.format(context),
+        'VEHICLE': _vehicleSeleccionat,
+        'VOL': _volController.text,
+        'SIGN': _welcomeSignController.text,
+        'PAX': _passatgersController.text,
+        'MALETES': _maletesController.text,
+        'NOTES': _observacionsController.text,
+        'ESTAT': 'pendent',
         'creat_el': FieldValue.serverTimestamp(),
       });
       
       if (!mounted) return;
-      Navigator.pop(context); 
+      Navigator.pop(context); // Tanquem el cercle de càrrega
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ResumReservaScreen(
-            dades: {
-              'origen': _origenController.text,
-              'desti': _destiController.text,
-              'data_objecte': _selectedDate,
-              'hora': _selectedTime.format(context),
-              'vehicle': _vehicleSeleccionat,
-              'vol_tren': _volController.text,
-              'welcome_sign': _welcomeSignController.text,
-              'passatgers': _passatgersController.text,
-              'maletes': _maletesController.text,
-              'observacions': _observacionsController.text,
-            },
-          ),
-        ),
+      // Tornem a l'inici amb un missatge d'èxit
+      Navigator.popUntil(context, (route) => route.isFirst);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Reserva enviada correctament! 🧡"))
       );
       
     } catch (e) {

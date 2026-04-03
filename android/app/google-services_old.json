@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "231873137659",
+    "project_id": "onlytransfer-lab",
+    "storage_bucket": "onlytransfer-lab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231873137659:android:bc7ecb9cf7e7c46b3d195e",
+        "android_client_info": {
+          "package_name": "com.onlytransfer.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrZFwH6OmLwNd0DsRTOdDjI1pNVLMB7-M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

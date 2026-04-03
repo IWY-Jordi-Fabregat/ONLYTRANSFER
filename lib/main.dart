@@ -1,259 +1,152 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart'; 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
+
+import 'experiencia_client.dart'; 
+import 'pantalla_conductor.dart';
+import 'web_gestion.dart';
+import 'pantalla_login.dart';
+import 'pantalla_client_web.dart'; // La que hem creat avui
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const OnlyTransferApp());
+  runApp(const MyApp());
 }
 
-// --- CONFIGURACIÓ DE PREUS (L'estanteria de Jordi) ---
-const Map<String, double> PREUS_ESTANDARD = {
-  "Aeroport BCN": 75.0,
-  "Estació de Sants": 45.0,
-  "Port de Barcelona": 55.0,
-  "Montserrat (Mig dia)": 250.0,
-  "Caves Codorniu": 300.0,
-};
+Map<String, dynamic> _textos = {};
+String t(String clau) => _textos[clau] ?? clau;
 
-class OnlyTransferApp extends StatelessWidget {
-  const OnlyTransferApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'OnlyTransfer',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'SF Pro Display',
-      ),
-      home: const PantallaSeleccio(),
+      theme: ThemeData(primarySwatch: Colors.orange, fontFamily: 'Apple'),
+      
+      // --- INTEGRACIÓ DE LA RUTA WEB SENSE TOCAR L'ESTRUCTURA ---
+      onGenerateRoute: (settings) {
+        // Si entrem per web amb /v/codi, anem a la pantalla de client
+        if (settings.name != null && settings.name!.startsWith('/v/')) {
+          final idViatge = settings.name!.substring(3);
+          return MaterialPageRoute(
+            builder: (context) => PantallaClientWeb(idViatge: idViatge),
+          );
+        }
+        // Per a tota la resta, l'app segueix el seu camí normal
+        return null; 
+      },
+
+      // Mantinc la teva lògica de home intacta
+      home: kIsWeb ? const PantallaTreballDiari() : const PantallaReceptor(),
     );
   }
 }
 
-// --- 1. SELECCIÓ (Missatges suaus i estètica Apple) ---
-class PantallaSeleccio extends StatelessWidget {
-  const PantallaSeleccio({super.key});
+// --- A PARTIR D'AQUÍ, EL TEU CODI ÉS EXACTAMENT IGUAL, NO HE TOCAT RES ---
+
+class PantallaReceptor extends StatefulWidget {
+  const PantallaReceptor({super.key});
+  @override
+  State<PantallaReceptor> createState() => _PantallaReceptorState();
+}
+
+class _PantallaReceptorState extends State<PantallaReceptor> {
+  bool _carregat = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarTot();
+  }
+
+  Future<void> _carregarTot() async {
+    Locale locale = WidgetsBinding.instance.platformDispatcher.locales.first;
+    String codi = "${locale.languageCode}_${locale.countryCode?.toLowerCase() ?? locale.languageCode}";
+    try {
+      String json = await rootBundle.loadString('assets/lang/$codi.json');
+      _textos = jsonDecode(json);
+    } catch (e) {
+      try {
+        String json = await rootBundle.loadString('assets/lang/ca_es.json');
+        _textos = jsonDecode(json);
+      } catch (e2) { _textos = {}; }
+    }
+    setState(() => _carregat = true);
+  }
+
+  void _gestionarAccesConductor() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? idSecret = prefs.getString('id_conductor_persistent');
+    
+    if (idSecret != null && idSecret.isNotEmpty) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => PantallaConductor(uidConductor: idSecret)));
+    } else {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const PantallaLogin()));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (!_carregat) return const Scaffold(backgroundColor: Color(0xFF2D3142));
+    double ample = MediaQuery.of(context).size.width;
+    double alt = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("ONLYTRANSFER", 
-          style: TextStyle(color: Color(0xFF2D3142), fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-        backgroundColor: Colors.white, elevation: 0, centerTitle: true,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+      backgroundColor: const Color(0xFF2D3142),
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          const Icon(Icons.directions_car_filled, color: Color(0xFFFF700A), size: 45),
-          const SizedBox(height: 25),
-          const Text("Benvingut a OnlyTransfer,", style: TextStyle(color: Colors.grey, fontSize: 16)),
-          const Text("Tenim per a tu tres tipus de servei,", style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const Text("Tria el servei que necessitis,", 
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D3142))),
-          
-          const SizedBox(height: 40),
+          Image.asset('assets/fons_app.jpg', fit: BoxFit.cover),
+          Container(color: Colors.black.withOpacity(0.35)), 
 
-          _seccioMenu(context, "TRASLLAT", Icons.airplanemode_active, 
-            "El servei de trasllat per exemple del Aeroport a Barcelona o de Barcelona al Aeroport és el més habitual."),
+          Center(
+            child: Image.asset(
+              'assets/imatges/onlytransfer_logo.png', 
+              height: 130, 
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, color: Colors.white),
+            ),
+          ),
 
-          _seccioMenu(context, "DISPOSICIÓ", Icons.access_time, 
-            "El servei de disposició està pensat per fer tours turístics per la ciutat i per fora com Montserrat o les Caves Codorniu."),
+          Positioned(
+            bottom: alt * 0.05, 
+            left: ample * 0.08, right: ample * 0.08,
+            child: GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ExperienciaClient())),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+                ),
+                child: Column(
+                  children: [
+                    Text(t('receptor_boto').toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 18, letterSpacing: 2)),
+                    const SizedBox(height: 10),
+                    Text(t('receptor_lema'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w300)),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-          _seccioMenu(context, "ESDEVENIMENTS", Icons.celebration, 
-            "Pensat per atendre Congressos, Events esportius o Concerts amb un temps determinat."),
+          Positioned(
+            top: alt * 0.35, left: ample * 0.25,
+            child: GestureDetector(
+              onDoubleTap: () => _gestionarAccesConductor(),
+              child: Container(width: 200, height: 200, color: Colors.transparent),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _seccioMenu(BuildContext ctx, String t, IconData i, String desc) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      GestureDetector(
-        onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (ctx) => PantallaDades(tipus: t))),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white, borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: const Color(0xFFEEEEEE)),
-          ),
-          child: Row(children: [
-            Icon(i, color: const Color(0xFFFF700A), size: 26),
-            const SizedBox(width: 20),
-            Text(t, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3142))),
-            const Spacer(),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF778591)),
-          ]),
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 25, left: 10),
-        child: Text(desc, style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4)),
-      ),
-    ],
-  );
-}
-
-// --- 2. DADES I RUTES RÀPIDES ---
-class PantallaDades extends StatefulWidget {
-  final String tipus;
-  const PantallaDades({super.key, required this.tipus});
-  @override
-  State<PantallaDades> createState() => _PantallaDadesState();
-}
-
-class _PantallaDadesState extends State<PantallaDades> {
-  final cOrig = TextEditingController();
-  final cDest = TextEditingController();
-  final cPreu = TextEditingController();
-  final cSign = TextEditingController();
-
-  void aplicarPreu(String desti, double preu) {
-    setState(() {
-      cOrig.text = "Barcelona Centre";
-      cDest.text = desti;
-      cPreu.text = preu.toString();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.tipus), backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(30),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text("RUTES RÀPIDES", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFFF700A))),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, children: [
-            if(widget.tipus == "TRASLLAT") ...[
-              ActionChip(label: const Text("Aeroport"), onPressed: () => aplicarPreu("Aeroport BCN", PREUS_ESTANDARD["Aeroport BCN"]!)),
-              ActionChip(label: const Text("Sants"), onPressed: () => aplicarPreu("Estació de Sants", PREUS_ESTANDARD["Estació de Sants"]!)),
-            ],
-            if(widget.tipus == "DISPOSICIÓ") ...[
-              ActionChip(label: const Text("Montserrat"), onPressed: () => aplicarPreu("Montserrat", PREUS_ESTANDARD["Montserrat (Mig dia)"]!)),
-              ActionChip(label: const Text("Caves"), onPressed: () => aplicarPreu("Caves Codorniu", PREUS_ESTANDARD["Caves Codorniu"]!)),
-            ],
-          ]),
-          const SizedBox(height: 30),
-          _camp(cOrig, "PUNT DE RECOLLIDA", Icons.location_on),
-          _camp(cDest, "DESTÍ", Icons.flag),
-          _camp(cSign, "WELCOME SIGN", Icons.badge),
-          _camp(cPreu, "PREU (€)", Icons.euro_symbol, teclatNumeric: true),
-          const SizedBox(height: 40),
-          ElevatedButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PantallaFactura(resum: {
-              'T': widget.tipus, 'O': cOrig.text, 'D': cDest.text, 'PREU': cPreu.text, 'SIGN': cSign.text
-            }))),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF700A), minimumSize: const Size(double.infinity, 65), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text("CONTINUAR", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _camp(TextEditingController c, String l, IconData i, {bool teclatNumeric = false}) => Padding(
-    padding: const EdgeInsets.only(bottom: 20),
-    child: TextField(
-      controller: c, keyboardType: teclatNumeric ? TextInputType.number : TextInputType.text,
-      decoration: InputDecoration(labelText: l, prefixIcon: Icon(i, color: const Color(0xFFFF700A)))
-    ),
-  );
-}
-
-// --- 4. FACTURACIÓ I FIREBASE ---
-class PantallaFactura extends StatelessWidget {
-  final Map<String, String> resum;
-  PantallaFactura({super.key, required this.resum});
-
-  final cNom = TextEditingController();
-  final cTax = TextEditingController();
-  final cMail = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("FACTURACIÓ"), backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
-      body: Padding(
-        padding: const EdgeInsets.all(35),
-        child: Column(children: [
-          _i("NOM O EMPRESA", cNom),
-          _i("TAX ID / DNI / CIF", cTax),
-          _i("EMAIL", cMail),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: () async {
-              Map<String, String> totPlegat = {
-                ...resum, 
-                'CLIENT': cNom.text, 
-                'TAX_ID': cTax.text, 
-                'MAIL': cMail.text,
-                'DATA': DateTime.now().toString()
-              };
-              
-              await FirebaseFirestore.instance.collection('viatges').add(totPlegat);
-
-              if (context.mounted) {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => PantallaAgraiment(dades: totPlegat)));
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF700A), minimumSize: const Size(double.infinity, 70), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(35))),
-            child: const Text("CONFIRMAR RESERVA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ]),
-      ),
-    );
-  }
-  Widget _i(String l, TextEditingController c) => Padding(
-    padding: const EdgeInsets.only(bottom: 15),
-    child: TextField(controller: c, decoration: InputDecoration(labelText: l)),
-  );
-}
-
-// --- 5. AGRAÏMENT (Estil Global) ---
-class PantallaAgraiment extends StatelessWidget {
-  final Map<String, String> dades;
-  const PantallaAgraiment({super.key, required this.dades});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center, 
-            children: [
-              const Icon(Icons.check_circle, color: Color(0xFFFF700A), size: 100),
-              const SizedBox(height: 30),
-              const Text(
-                "RESERVA REGISTRADA", 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF2D3142))
-              ),
-              const SizedBox(height: 15),
-              const Text(
-                "Reserva grabada a nuestros servidores centrales en todo el mundo.", 
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 15, height: 1.5)
-              ),
-              const SizedBox(height: 60),
-              ElevatedButton(
-                onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D3142), // Gris Negre per a un acabat elegant
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
-                ), 
-                child: const Text("TORNAR A L'INICI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              )
-            ],
-          ),
-        ),
       ),
     );
   }

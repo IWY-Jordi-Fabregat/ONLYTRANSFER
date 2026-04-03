@@ -1,29 +1,6 @@
 {
-  "flutter": {
-    "platforms": {
-      "android": {
-        "default": {
-          "projectId": "onlytransfer-lab",
-          "appId": "1:231873137659:android:bc7ecb9cf7e7c46b3d195e",
-          "fileOutput": "android/app/google-services.json"
-        }
-      },
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "onlytransfer-lab",
-          "configurations": {
-            "android": "1:231873137659:android:bc7ecb9cf7e7c46b3d195e",
-            "ios": "1:231873137659:ios:a10a0f1600d6cc993d195e",
-            "macos": "1:231873137659:ios:a10a0f1600d6cc993d195e",
-            "web": "1:231873137659:web:fc5d643b30979fc13d195e",
-            "windows": "1:231873137659:web:3c3464d9da9129353d195e"
-          }
-        }
-      }
-    }
-  },
   "hosting": {
-    "public": "web_viatges",
+    "public": "build/web",
     "ignore": [
       "firebase.json",
       "**/.*",

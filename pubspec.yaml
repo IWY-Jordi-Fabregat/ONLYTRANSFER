@@ -2,7 +2,7 @@ name: only_transfer
 description: "Sistema VIP OnlyTransfer"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+14
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.19.0
-  url_launcher: ^6.1.10
+  url_launcher: ^6.3.2
   google_maps_flutter: ^2.2.5
   share_plus: ^7.1.0
   font_awesome_flutter: ^10.4.0
@@ -21,6 +21,10 @@ dependencies:
   cloud_firestore: ^6.2.0
   flutter_stripe: ^12.4.0
   google_maps_webservice: ^0.0.20-nullsafety.5
+  image_picker: ^1.2.1
+  shared_preferences: ^2.2.2
+  http: ^0.13.6
+ # google_places_flutter: ^2.0.8
 
 dev_dependencies:
   flutter_test:
@@ -42,3 +46,6 @@ flutter:
     - assets/logo.png
     - assets/logo_app.png
     - assets/imatges/logo_onlyt.png
+    - assets/fons_app.jpg
+    - assets/imatges/onlytransfer_logo.png
+    - assets/lang/
