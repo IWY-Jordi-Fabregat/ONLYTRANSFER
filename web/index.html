@@ -1,83 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="ca">
 <head>
-  <base href="/">
-
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="OnlyTransfer - Gestió Logística de Luxe">
-
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="OnlyTransfer">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>OnlyTransfer - Torre de Control</title>
-  <link rel="manifest" href="manifest.json">
-
-  <style>
-    /* Pantalla de càrrega neta i minimalista */
-    body {
-      background-color: #FFFFFF;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      width: 100vw;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    .container {
-      text-align: center;
-    }
-
-    .loader {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #F3F3F3;
-      border-top: 3px solid #FF700A; /* El teu taronja corporatiu */
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px auto;
-    }
-
-    .loading-text {
-      color: #2D3142;
-      font-weight: 600;
-      letter-spacing: 1px;
-      font-size: 14px;
-      text-transform: uppercase;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnlyTransfer | Gestió Central</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f9f9f9; color: #2D3142; }
+        .accent { color: #FF700A; }
+        .bg-accent { background-color: #FF700A; }
+        .card { background: white; border: 1px solid #EEEEEE; border-radius: 12px; }
+    </style>
 </head>
-<body>
-  <div class="container">
-    <div class="loader"></div>
-    <div class="loading-text">OnlyTransfer</div>
-  </div>
+<body class="p-4 md:p-8">
+    <div class="w-full flex justify-between items-center mb-8 px-2">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight uppercase">OnlyTransfer</h1>
+            <p class="text-gray-400 text-xs italic">Panel de Gestió Operativa</p>
+        </div>
+        <div class="text-right">
+            <span class="text-[10px] font-black px-3 py-1 bg-green-100 text-green-600 rounded-full border border-green-200">SISTEMA CONNECTAT</span>
+        </div>
+    </div>
 
-  <script src="flutter_bootstrap.js" async></script>
+    <div class="w-full card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50 text-gray-400 text-[10px] uppercase font-black tracking-widest">
+                    <tr>
+                        <th class="px-6 py-4">Data/Hora</th>
+                        <th class="px-6 py-4">Client</th>
+                        <th class="px-6 py-4">Trajecte</th>
+                        <th class="px-6 py-4 text-center">Conductor</th>
+                        <th class="px-6 py-4 text-right">Acció</th>
+                    </tr>
+                </thead>
+                <tbody id="taula-viatges" class="divide-y divide-gray-100 text-sm">
+                    </tbody>
+            </table>
+        </div>
+    </div>
 
-  <script>
-    // Forçar la neteja del Service Worker si hi ha canvis crítics
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.getRegistrations().then(function (registrations) {
-          for (let registration of registrations) {
-            registration.update();
-          }
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDrZFwH6OmLwNd0DsRTOdDjI1pNVLMB7-M", 
+        authDomain: "onlytransfer-lab.firebaseapp.com",
+        projectId: "onlytransfer-lab",
+        storageBucket: "onlytransfer-lab.appspot.com",
+        messagingSenderId: "221008082400", 
+        appId: "1:221008082400:web:1270529e377011d871781b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ORDRE INTERN: Llista de noms i els seus IDs reals
+    const llistaXofers = {
+        "JORDI": "LyDG56awPCpk22Kbsqx6",
+        "ANDREA": "ID_PROVA_ANDREA"
+    };
+
+    // ARA BUSQUEM SEMPRE A 'reserves' PER ANAR IGUAL QUE EL MÒBIL
+    const q = query(collection(db, "reserves"));
+
+    onSnapshot(q, (querySnapshot) => {
+        const taula = document.getElementById("taula-viatges");
+        taula.innerHTML = ""; 
+
+        querySnapshot.forEach((docSnap) => {
+            const v = docSnap.data();
+            const idDoc = docSnap.id;
+            const conductor = v.nom_xofer || "PENDENT";
+
+            const fila = `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-5 text-gray-400 font-medium">${v.data || '---'} <br> <span class="text-gray-800 font-bold">${v.hora || '--:--'}</span></td>
+                    <td class="px-6 py-5 font-black text-gray-800 uppercase">${v.client || 'SENSE NOM'}</td>
+                    <td class="px-6 py-5">
+                        <div class="text-green-600 text-xs font-bold">↑ ${v.origen || '---'}</div>
+                        <div class="text-red-500 text-xs font-bold">↓ ${v.desti || '---'}</div>
+                    </td>
+                    <td class="px-6 py-5 text-center">
+                        <span class="px-3 py-1 rounded text-[9px] font-black ${v.nom_xofer ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}">
+                            ${conductor}
+                        </span>
+                    </td>
+                    <td class="px-6 py-5 text-right">
+                        <button onclick="assignar('${idDoc}')" class="bg-[#2D3142] text-white px-4 py-2 rounded text-[10px] font-bold hover:bg-[#FF700A] transition-all">
+                            ASSIGNAR
+                        </button>
+                    </td>
+                </tr>
+            `;
+            taula.innerHTML += fila;
         });
-      });
-    }
-  </script>
+    });
+
+    window.assignar = async (id) => {
+        const nom = prompt("Nom del Conductor (Exemple: JORDI):");
+        if (!nom) return;
+        
+        const nomNet = nom.toUpperCase().trim();
+        const idReal = llistaXofers[nomNet];
+
+        if (idReal) {
+            try {
+                await updateDoc(doc(db, "reserves", id), {
+                    nom_xofer: nomNet,
+                    UID_xofer: idReal,
+                    estat_servei: "assignat"
+                });
+            } catch (e) { alert("Error al guardar"); }
+        } else {
+            alert("Nom no registrat a la llista interna.");
+        }
+    };
+</script>
 </body>
 </html>

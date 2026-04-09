@@ -36,7 +36,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => PantallaConductor(uidConductor: idSecret),
+        builder: (context) => PantallaConductor(uidXofer: idSecret),
             ),
           );
         }

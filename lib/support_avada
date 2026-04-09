@@ -1,0 +1,31 @@
+Subject:
+
+Critical Issue: Custom HTML/JavaScript blocks being stripped or non-functional in Avada Builder
+Message:
+
+Hi Avada Team,
+
+I am developing a high-end transportation platform (OnlyTransfer) and I am facing a critical issue with the Avada Builder.
+
+The Problem:
+I am trying to implement a simple redirection form (Input + Button) to send users to a sub-domain Web App. Every time I use a "Code Block" or a "Custom HTML" element to insert a basic <form> with a GET method or a simple JavaScript window.location.href, the code is either stripped or the button becomes non-functional after saving.
+
+What I need:
+I need to allow a simple input field where the user types a 8-digit code (e.g., B7K2P9WR) and, upon clicking the button, it redirects them to:
+https://app.onlytransfer.eu/#/reserva?id=USER_CODE
+
+Technical Environment:
+
+    Avada Version: Latest
+
+    WordPress Version: Latest
+
+    Caching: Cleared
+
+    Plugin Conflicts: None found
+
+Could you please specify the "Avada-way" to implement a simple external redirection based on user input without the builder breaking the script or the form action?
+
+Best regards,
+Jordi Fabregat
+CEO, OnlyTransfer

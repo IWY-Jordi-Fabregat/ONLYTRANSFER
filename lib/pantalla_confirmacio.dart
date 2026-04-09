@@ -23,13 +23,23 @@ class PantallaConfirmacio extends StatelessWidget {
           children: [
             const Icon(Icons.check_circle_outline, color: Color(0xFFFF700A), size: 100),
             const SizedBox(height: 30),
-            Text("${t('confirma_gracies')}, $nomClient!", textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text("${t('confirma_gracies')}, $nomClient!", 
+              textAlign: TextAlign.center, 
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             Text(t('confirma_rebut'), textAlign: TextAlign.center),
             const SizedBox(height: 40),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D3142), // El teu Gris Negre corporatiu
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              ),
+              // MODIFICACIÓ AQUÍ: Torna a l'inici real (la pantalla negra)
               onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-              child: Text(t('confirma_boto_inici')),
+              child: Text(
+                t('confirma_boto_inici').toUpperCase(),
+                style: const TextStyle(color: Colors.white),
+              ),
             )
           ],
         ),

@@ -6,8 +6,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class PantallaConductor extends StatefulWidget {
-  final String uidConductor;
-  const PantallaConductor({super.key, required this.uidConductor});
+  final String uidXofer;
+  const PantallaConductor({super.key, required this.uidXofer});
 
   @override
   State<PantallaConductor> createState() => _PantallaConductorState();
@@ -18,98 +18,77 @@ class _PantallaConductorState extends State<PantallaConductor> {
   final Color grisNegre = const Color(0xFF2D3142);
   final Color grisClar = const Color(0xFF778591);
 
-  // --- 1. TARGETA ESTIL IWY (CORREGIDA PER EVITAR OVERFLOW) ---
+  // --- 1. TARGETA INTEGRADA AMB CODI DE RESERVA ---
   Widget _targetaViatge(Map<String, dynamic> d, String idDoc) {
-    if (d['VOL'] != null && d['VOL'] != "" && d['ULTIMA_CONSULTA_VOL'] == null) {
-      _consultarAPIvols(idDoc, d['VOL']);
-    }
+    String client = (d['client'] ?? "").toString();
+    String origen = (d['origen'] ?? "").toString();
+    String desti = (d['desti'] ?? "").toString();
+    String hora = (d['hora'] ?? "--:--").toString();
+    String pax = (d['pax'] ?? "0").toString();
+    String maletes = (d['maletes'] ?? "0").toString();
+    String tipus = (d['tipus'] ?? "TRANSFER").toString();
+    // Camp clau per "tancar el cercle"
+    String codiReserva = (d['codi_reserva'] ?? "---").toString();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-decoration: BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.circular(16), // Cantons arrodonits estil iOS
-  border: Border.all(
-    color: const Color(0xFF778591).withOpacity(0.2), // El teu Gris Clar, molt suau
-    width: 1,
-  ),
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.05), // Ombra gairebé invisible però real
-      blurRadius: 10,
-      offset: const Offset(0, 4), // L'ombra cau una mica cap avall
-    ),
-  ],
-),      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: grisClar.withOpacity(0.1)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      ),
+      child: InkWell(
         onTap: () => _obrirMenuOperatiu(d, idDoc),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // HORA FIXA (Format 24h depèn de com ho posis a Firebase, aquí li donem l'espai)
-                  SizedBox(
-                    width: 60,
-                    child: Text(
-                      "${d['HORA']}", 
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold, 
-                        fontSize: 18, 
-                        color: (d['RETARD'] == true) ? taronja : grisNegre
-                      )
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // NOM CLIENT AMB LIMITACIÓ DE CARÀCTERS
+                  Text(hora, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  const SizedBox(width: 15),
                   Expanded(
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            d['CLIENT']?.toString().toUpperCase() ?? "",
-                            style: TextStyle(color: taronja, fontWeight: FontWeight.bold, fontSize: 15),
-                            overflow: TextOverflow.ellipsis, // Posa els ... si és massa llarg
-                            maxLines: 1,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('viatges')
-                              .doc(idDoc)
-                              .collection('xat')
-                              .where('autor', isEqualTo: 'CLIENT')
-                              .where('llegit', isEqualTo: false)
-                              .snapshots(),
-                          builder: (context, snap) {
-                            if (snap.hasData && snap.data!.docs.isNotEmpty) {
-                              return Container(
-                                width: 8, height: 8,
-                                decoration: BoxDecoration(color: taronja, shape: BoxShape.circle),
-                              );
-                            }
-                            return const SizedBox();
-                          },
-                        ),
+                        Text(client.toUpperCase(), 
+                          style: TextStyle(color: grisNegre, fontWeight: FontWeight.w900, fontSize: 14)),
+                        // MOSTRAR CODI ALS DOS COSTATS
+                        Text("CODI: $codiReserva", 
+                          style: TextStyle(color: taronja, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
                       ],
                     ),
                   ),
-                  // INFO VOL
-                  if (d['VOL'] != null && d['VOL'] != "") ...[
-                    const SizedBox(width: 5),
-                    Icon(Icons.flight_land, size: 14, color: (d['RETARD'] == true) ? taronja : grisClar),
-                    const SizedBox(width: 4),
-                    Text("${d['VOL']}", style: TextStyle(fontSize: 10, color: grisClar)),
-                  ],
+                  Text(tipus, style: TextStyle(fontSize: 10, color: grisClar, fontWeight: FontWeight.bold)),
                 ],
               ),
-              const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: Color(0xFFF0F0F0))),
-              _filaRuta(Icons.login, Colors.green, d['O'] ?? ""),
-              const SizedBox(height: 6),
-              _filaRuta(Icons.logout, Colors.red, d['D'] ?? ""),
+              const Divider(height: 24),
+              _filaRuta(Icons.login, Colors.green, origen),
+              const SizedBox(height: 8),
+              _filaRuta(Icons.logout, Colors.red, desti),
+              const Divider(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 18, color: Color(0xFF778591)),
+                      const SizedBox(width: 5),
+                      Text(pax, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 25),
+                      const Icon(Icons.luggage, size: 18, color: Color(0xFF778591)),
+                      const SizedBox(width: 5),
+                      Text(maletes, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  // Botó ràpid de xat amb indicador de missatges si calgués
+                  IconButton(
+                    icon: Icon(Icons.forum_outlined, color: taronja),
+                    onPressed: () => _obrirXatTraductor(context, d, idDoc),
+                  )
+                ],
+              ),
             ],
           ),
         ),
@@ -129,78 +108,57 @@ decoration: BoxDecoration(
 
   // --- 2. MENÚ OPERATIU ---
   void _obrirMenuOperatiu(Map<String, dynamic> d, String idDoc) {
-    int pasActual = d['PAS_OPERATIU'] ?? 0;
+    String clientV = (d['client'] ?? "SENSE NOM").toString();
+    String destiV = (d['desti'] ?? "No definit").toString();
+    String horaV = (d['hora'] ?? "--:--").toString();
+    String codiV = (d['codi_reserva'] ?? "---").toString();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: const EdgeInsets.all(25),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(d['CLIENT'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: grisNegre)),
-                  const SizedBox(height: 5),
-                  Text("Idioma: ${d['IDIOMA_CLIENT'] ?? 'Detectant...'}", style: TextStyle(color: grisClar, fontSize: 12)),
-                  const Divider(height: 40),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                     _botoEina(Icons.map_outlined, "MAPA", Colors.blue, () async {
-  final url = Uri.parse("google.navigation:q=${Uri.encodeComponent(d['O'])}");
-  await launchUrl(url);
-}),
-                      _botoEina(Icons.chat_bubble_outline, "XAT DEEPL", taronja, () {
-                        Navigator.pop(context);
-                        _obrirXatTraductor(context, d, idDoc);
-                      }),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 70,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: pasActual == 4 ? Colors.green : (pasActual == 0 ? Colors.blue : grisNegre),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        elevation: 0,
-                      ),
-                      onPressed: () async {
-                        String ara = DateFormat('HH:mm').format(DateTime.now());
-                        pasActual++;
-                        await FirebaseFirestore.instance.collection('viatges').doc(idDoc).update({
-                          'PAS_OPERATIU': pasActual,
-                          'HORA_PAS_$pasActual': ara,
-                        });
-                        if (pasActual > 5) {
-                          await FirebaseFirestore.instance.collection('viatges').doc(idDoc).update({'ESTAT_SERVEI': 'FINALITZAT'});
-                          Navigator.pop(context);
-                        }
-                        setModalState(() {});
-                      },
-                      child: Text(_textBoto(pasActual), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 20), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+              Text(clientV.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF2D3142))),
+              Text("RESERVA: $codiV", style: TextStyle(color: taronja, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SizedBox(height: 30),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFFE8F5E9), child: Icon(Icons.play_arrow, color: Colors.green)),
+                title: const Text("INICIAR SERVEI", style: TextStyle(fontWeight: FontWeight.bold)),
+                onTap: () {
+                  FirebaseFirestore.instance.collection('reserves').doc(idDoc).update({'estat_servei': 'en_cami'});
+                  Navigator.pop(context);
+                },
               ),
-            );
-          },
+              const Divider(),
+              ListTile(
+                leading: CircleAvatar(backgroundColor: taronja.withOpacity(0.1), child: Icon(Icons.forum, color: taronja)),
+                title: const Text("OBRIR XAT TRADUCTOR"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _obrirXatTraductor(context, d, idDoc);
+                },
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  // --- 3. XAT TRADUCTOR ---
+  // --- 3. XAT TRADUCTOR (Sincronitzat amb col·lecció 'reserves') ---
   void _obrirXatTraductor(BuildContext context, Map<String, dynamic> d, String idDoc) async {
     TextEditingController controllerMsg = TextEditingController();
 
+    // Marcar com llegit
     var missatgesNoLlegits = await FirebaseFirestore.instance
-        .collection('viatges').doc(idDoc).collection('xat')
+        .collection('reserves').doc(idDoc).collection('xat')
         .where('autor', isEqualTo: 'CLIENT')
         .where('llegit', isEqualTo: false).get();
     
@@ -226,14 +184,14 @@ decoration: BoxDecoration(
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("XAT AMB ${d['CLIENT']}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: grisNegre)),
+                    Text("XAT AMB ${d['client']}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: grisNegre)),
                     IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
                   ],
                 ),
                 const Divider(),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('viatges').doc(idDoc).collection('xat').orderBy('creat_el', descending: true).snapshots(),
+                    stream: FirebaseFirestore.instance.collection('reserves').doc(idDoc).collection('xat').orderBy('creat_el', descending: true).snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                       var msgs = snapshot.data!.docs;
@@ -293,13 +251,13 @@ decoration: BoxDecoration(
                         child: IconButton(
                           onPressed: () async {
                             if (controllerMsg.text.isEmpty) return;
-                            await FirebaseFirestore.instance.collection('viatges').doc(idDoc).collection('xat').add({
+                            await FirebaseFirestore.instance.collection('reserves').doc(idDoc).collection('xat').add({
                               'autor': 'CONDUCTOR',
                               'text_cat': controllerMsg.text,
                               'text_traduit': '', 
                               'creat_el': FieldValue.serverTimestamp(),
                               'llegit': false,
-                              'idioma_desti': d['IDIOMA_CLIENT'] ?? 'EN',
+                              'idioma_desti': d['idioma_client'] ?? 'EN',
                             });
                             controllerMsg.clear();
                           },
@@ -317,69 +275,34 @@ decoration: BoxDecoration(
     );
   }
 
-  // --- 4. API AVIATION ---
-  Future<void> _consultarAPIvols(String idDoc, String volNum) async {
-    const String apiKey = "a9579a6e6c1d23b11609042190aabb5a";
-    try {
-      final response = await http.get(Uri.parse("http://api.aviationstack.com/v1/flights?access_key=$apiKey&flight_iata=$volNum"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['data'] != null && data['data'].isNotEmpty) {
-          var f = data['data'][0];
-          var depDelay = f['departure']['delay']; 
-          await FirebaseFirestore.instance.collection('viatges').doc(idDoc).update({
-            'RETARD': (depDelay != null && depDelay > 15),
-            'ULTIMA_CONSULTA_VOL': DateTime.now().toIso8601String(),
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Error vol: $e");
-    }
-  }
-
-  // --- FUNCIONS SUPORT ---
-  Widget _botoEina(IconData icona, String text, Color color, VoidCallback accio) {
-    return Column(
-      children: [
-        IconButton(onPressed: accio, icon: Icon(icona, color: color, size: 28), style: IconButton.styleFrom(backgroundColor: color.withOpacity(0.1), padding: const EdgeInsets.all(15))),
-        const SizedBox(height: 8),
-        Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
-      ],
-    );
-  }
-
-  String _textBoto(int pas) {
-    switch (pas) {
-      case 0: return "SALGO DE LA BASE";
-      case 1: return "LLEGO AL PUNTO DE RECOGIDA";
-      case 2: return "APARECE EL CLIENTE";
-      case 3: return "ARRANCAMOS";
-      case 4: return "CLIENTE EN DESTINO";
-      default: return "FINALIZAR SERVEI";
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: Text("ONLYTRANSFER", style: TextStyle(color: grisNegre, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        title: const Text("ONLYTRANSFER", style: TextStyle(color: Color(0xFF2D3142), fontWeight: FontWeight.bold, letterSpacing: 1.2)),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('viatges').where('UID_CONDUCTOR', isEqualTo: widget.uidConductor).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('reserves')
+            .where('UID_xofer', isEqualTo: widget.uidXofer)
+            .snapshots(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) return const Center(child: Text("Error de connexió"));
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Color(0xFFFF700A)));
+          
           var docs = snapshot.data!.docs;
-          if (docs.isEmpty) return const Center(child: Text("No hi ha viatges avui."));
+          if (docs.isEmpty) return const Center(child: Text("No hi ha reserves assignades"));
+
           return ListView.builder(
             padding: const EdgeInsets.only(top: 10, bottom: 30),
             itemCount: docs.length,
-            itemBuilder: (context, i) => _targetaViatge(docs[i].data() as Map<String, dynamic>, docs[i].id),
+            itemBuilder: (context, i) {
+              return _targetaViatge(docs[i].data() as Map<String, dynamic>, docs[i].id);
+            },
           );
         },
       ),

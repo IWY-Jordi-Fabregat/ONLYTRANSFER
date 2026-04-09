@@ -175,14 +175,46 @@ class _PantallaTreballDiariState extends State<PantallaTreballDiari> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          // 3. RUTA ESTIL IWY
+
+                          // --- COLUMNA: PAGAT (RODONETA VERDA) ---
+                          SizedBox(
+                            width: 50,
+                            child: Center(
+                              child: (d['estat_pagament'] == 'PAGAT' || d['estat_pagament'] == 'COBRAT (1€ Prova)')
+                                  ? Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                                      child: const Icon(Icons.check, color: Colors.white, size: 10),
+                                    )
+                                  : Icon(Icons.circle_outlined, color: Colors.grey.shade300, size: 18),
+                            ),
+                          ),
+
+                          // --- COLUMNA: PERSONES I MALETES ---
+                          SizedBox(
+                            width: 100,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.person_outline, size: 14, color: grisClar),
+                                const SizedBox(width: 4),
+                                Text("${d['PAX'] ?? '1'}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 12),
+                                Icon(Icons.luggage_outlined, size: 14, color: grisClar),
+                                const SizedBox(width: 4),
+                                Text("${d['MALETES'] ?? '0'}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+
+                          // 3. RUTA
                           Expanded(
                             flex: 3,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("> ${d['O']}", style: const TextStyle(fontSize: 12, color: Colors.green), overflow: TextOverflow.ellipsis),
-                                Text("< ${d['D']}", style: const TextStyle(fontSize: 12, color: Colors.red), overflow: TextOverflow.ellipsis),
+                                Text("> ${d['O']}", style: const TextStyle(fontSize: 11, color: Colors.green), overflow: TextOverflow.ellipsis),
+                                Text("< ${d['D']}", style: const TextStyle(fontSize: 11, color: Colors.red), overflow: TextOverflow.ellipsis),
                               ],
                             ),
                           ),
@@ -190,11 +222,6 @@ class _PantallaTreballDiariState extends State<PantallaTreballDiari> {
                           SizedBox(
                             width: 90,
                             child: Text(d['VOL'] ?? "---", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
-                          ),
-                          // 5. LOGÍSTICA
-                          SizedBox(
-                            width: 80,
-                            child: Text("P:${d['PAX'] ?? '1'} M:${d['MALETES'] ?? '0'}", textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
                           ),
                           // 6. OBSERVACIONS
                           Expanded(
