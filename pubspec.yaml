@@ -2,7 +2,7 @@ name: only_transfer
 description: "Sistema VIP OnlyTransfer"
 publish_to: 'none'
 
-version: 1.0.3+74
+version: 1.0.4+93
 
 environment:
   sdk: ^3.11.0
