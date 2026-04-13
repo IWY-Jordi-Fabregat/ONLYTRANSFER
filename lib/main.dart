@@ -15,6 +15,7 @@ import 'screens/pantalla_conductor.dart';
 import 'screens/web_gestion.dart';
 import 'screens/pantalla_login.dart';
 import 'screens/pantalla_client_web.dart';
+import 'screens/pantalla_seleccio_servei.dart';
 
 // TEXTOS GLOBALS
 Map<String, dynamic> _textos = {};
@@ -233,7 +234,7 @@ class _PantallaReceptorState extends State<PantallaReceptor> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ExperienciaClient(),
+                  builder: (context) => const PantallaSeleccioServei(),
                   ),
                 );
               },

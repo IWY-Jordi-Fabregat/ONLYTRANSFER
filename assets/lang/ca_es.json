@@ -102,5 +102,8 @@
   "mes_9": "setembre",
   "mes_10": "octubre",
   "mes_11": "novembre",
-  "mes_12": "desembre"
+  "mes_12": "desembre",
+
+  "menu_corporatiu": "Reserva corporativa",
+  "menu_corporatiu_sub": "Empreses, hotels i col·laboradors"
 }

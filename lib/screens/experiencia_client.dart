@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '../services/stripe_service.dart';
 import '../services/reserva_service.dart';
+import '../services/configuracio_service.dart';
 
 // --- COLORS CORPORATIUS ONLYTRANSFER ---
 const Color colorFonsBlanc = Colors.white;
@@ -27,6 +28,14 @@ class ExperienciaClient extends StatefulWidget {
 class _ExperienciaClientState extends State<ExperienciaClient> {
   int _pasActual = 0;
   bool _processant = false;
+ConfiguracioEmpresa _config = const ConfiguracioEmpresa(
+  preuSedan: 125,
+  preuVan: 185,
+  margeOnlyTransfer: 20,
+  tempsEntreServeisMin: 120,
+);
+
+bool _carregantConfig = true;
 
   // CONTROLADORS
   final TextEditingController _origenController = TextEditingController();
@@ -125,7 +134,7 @@ final dadesReserva = {
       : "Sedan Luxe",
 
   // ECONÒMIC
-  'import': (numPax >= 3 || numMaletes >= 3) ? "185.00" : "125.00",
+  'import': _preuActual().toStringAsFixed(2),
   'estat_pagament': 'PAGAT',
 
   // SERVEI
@@ -147,6 +156,12 @@ final dadesReserva = {
   'log_4': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
   'log_5': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
   'log_6': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
+
+  'tipus_client': 'particular',
+  'tipus_pagament': 'instantani',
+  'estat_pagament': 'PAGAT',
+  'dni': _dniClientController.text,
+  'welcome_sign': sign,
 
   // EMAIL
   'to': mailClient,
@@ -186,9 +201,15 @@ final dadesReserva = {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+@override
+Widget build(BuildContext context) {
+  if (_carregantConfig) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(color: colorTaronjaVIP),
+      ),
+    );
+  }    return Scaffold(
       backgroundColor: colorFonsBlanc,
       appBar: AppBar(
         title: const Text(
@@ -369,10 +390,8 @@ final dadesReserva = {
   }
 
   Widget _pantallaIdentificacio() {
-    int numPax = int.tryParse(_paxController.text) ?? 1;
-    int numMaletes = int.tryParse(_maletesController.text) ?? 0;
-    String preuFinal = (numPax >= 3 || numMaletes >= 3) ? "185,00 €" : "125,00 €";
-
+   String preuFinal =
+    "${_preuActual().toStringAsFixed(2).replaceAll('.', ',')} €";
     return SingleChildScrollView(
       padding: const EdgeInsets.all(25),
       child: Column(
@@ -642,6 +661,34 @@ final dadesReserva = {
       setState(() => _selectedTime = p);
     }
   }
+ @override
+ void initState() {
+  super.initState();
+  _carregarConfiguracio();
+ }
+double _preuActual() {
+  final int numPax = int.tryParse(_paxController.text) ?? 1;
+  final int numMaletes = int.tryParse(_maletesController.text) ?? 0;
+
+  return (numPax >= 3 || numMaletes >= 3)
+      ? _config.preuVan
+      : _config.preuSedan;
+}
+ Future<void> _carregarConfiguracio() async {
+  try {
+    final cfg = await ConfiguracioService.obtenirConfiguracio();
+    if (!mounted) return;
+    setState(() {
+      _config = cfg;
+      _carregantConfig = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
+    setState(() {
+      _carregantConfig = false;
+    });
+  }
+}
 
   @override
   void dispose() {

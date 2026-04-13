@@ -102,5 +102,8 @@
   "mes_9": "september",
   "mes_10": "october",
   "mes_11": "november",
-  "mes_12": "december"
+  "mes_12": "december",
+
+  "menu_corporatiu": "Corporate booking",
+  "menu_corporatiu_sub": "Companies, hotels and partners"
 }

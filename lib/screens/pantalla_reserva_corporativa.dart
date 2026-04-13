@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'dart:convert';
 import 'dart:math';
-import 'package:http/http.dart' as http;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/stripe_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
 import '../services/reserva_service.dart';
 
 // --- COLORS CORPORATIUS ONLYTRANSFER ---
@@ -16,30 +17,45 @@ const Color colorGrisFosc = Color(0xFF556677);
 const Color colorGrisNegre = Color(0xFF2D3142);
 const Color colorGrisClarBackground = Color(0xFFF0F2F5);
 
-class PantallaReservaCorporativa extends StatefulWidget{
-  const ExperienciaClient({super.key});
+class PantallaReservaCorporativa extends StatefulWidget {
+  const PantallaReservaCorporativa({super.key});
 
   @override
- State<PantallaReservaCorporativa> createState() => _ExperienciaClientState();
+  State<PantallaReservaCorporativa> createState() =>
+      _PantallaReservaCorporativaState();
 }
 
-class _ExperienciaClientState extends State<ExperienciaClient> {
+class _PantallaReservaCorporativaState
+    extends State<PantallaReservaCorporativa> {
   int _pasActual = 0;
   bool _processant = false;
 
-  // CONTROLADORS
+  // --- SERVEI ---
   final TextEditingController _origenController = TextEditingController();
   final TextEditingController _destiController = TextEditingController();
   final TextEditingController _volController = TextEditingController();
   final TextEditingController _paxController = TextEditingController(text: '1');
-  final TextEditingController _maletesController = TextEditingController(text: '0');
+  final TextEditingController _maletesController =
+      TextEditingController(text: '0');
   final TextEditingController _obsController = TextEditingController();
   final TextEditingController _welcomeSignController = TextEditingController();
 
+  // --- CONTACTE / EMPRESA ---
   final TextEditingController _nomClientController = TextEditingController();
-  final TextEditingController _dniClientController = TextEditingController();
   final TextEditingController _mailClientController = TextEditingController();
   final TextEditingController _telClientController = TextEditingController();
+
+  final TextEditingController _nomEmpresaController = TextEditingController();
+  final TextEditingController _personaContacteController =
+      TextEditingController();
+  final TextEditingController _emailEmpresaController =
+      TextEditingController();
+  final TextEditingController _telefonEmpresaController =
+      TextEditingController();
+  final TextEditingController _referenciaInternaController =
+      TextEditingController();
+  final TextEditingController _obsFacturacioController =
+      TextEditingController();
 
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 12, minute: 0);
@@ -52,107 +68,121 @@ class _ExperienciaClientState extends State<ExperienciaClient> {
     ).join();
   }
 
+  Future<void> _crearReservaCorporativa() async {
+    if (_nomEmpresaController.text.trim().isEmpty ||
+        _personaContacteController.text.trim().isEmpty ||
+        _emailEmpresaController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Omple com a mínim empresa, persona de contacte i correu",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-  Future<void> _gravarReservaAFirebase() async {
-    int numPax = int.tryParse(_paxController.text) ?? 1;
-    int numMaletes = int.tryParse(_maletesController.text) ?? 0;
-    String codiUnic = _generarCodiReservaNetejat();
-
-    String mailClient = _mailClientController.text.trim();
-    String nomClient = _nomClientController.text.isEmpty
-        ? "Client VIP"
-        : _nomClientController.text;
-    String vol = _volController.text.isEmpty ? "No indicat" : _volController.text;
-    String sign = _welcomeSignController.text.isEmpty
-        ? nomClient
-        : _welcomeSignController.text;
-
-final dadesReserva = {
-  // CLIENT
-  'client': nomClient,
-  'dni': _dniClientController.text,
-  'email': mailClient,
-  'telefon': _telClientController.text,
-
-  // SERVEI
-  'codi_reserva': codiUnic,
-  'data': DateFormat('dd/MM/yyyy').format(_selectedDate),
-  'hora': _selectedTime.format(context),
-  'data_servei_ts': Timestamp.fromDate(_selectedDate),
-  'origen': _origenController.text,
-  'desti': _destiController.text,
-  'ciutat': 'Barcelona',
-
-  // OPERATIVA
-  'pax': numPax.toString(),
-  'maletes': numMaletes.toString(),
-  'vehicle_tipus': (numPax >= 3 || numMaletes >= 3)
-      ? "VAN Executive"
-      : "Sedan Luxe",
-
-  // ECONÒMIC
-  'import': (numPax >= 3 || numMaletes >= 3) ? "185.00" : "125.00",
-  'tipus_client': 'corporatiu', 
-  'tipus_pagament': 'empresa',  
-  'estat_pagament': 'PENDENT_TRANSFERENCIA',
-  'nom_empresa': _nomClientController.text,
-
-  // SERVEI
-  'estat_servei': 'pendent_assignar',
-  'conductor_id': '',
-
-  // PAGAMENT CONDUCTOR
-  'pagat_conductor': false,
-  'data_pagament_conductor': null,
-
-  // CONTROL
-  'tipus_client': 'particular',
-  'creat_el': FieldValue.serverTimestamp(),
-
-  // LOGS
-  'log_1': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
-  'log_2': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
-  'log_3': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
-  'log_4': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
-  'log_5': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
-  'log_6': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
-
-  // EMAIL
-  'to': mailClient,
-  'message': {
-    'subject': 'Confirmació Reserva OnlyTransfer: $codiUnic',
-        'html': '''
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #f0f0f0; border-radius: 10px; max-width: 600px; margin: auto;">
-          <h1 style="color: #FF700A; text-align: center; letter-spacing: 2px;">ONLY TRANSFER</h1>
-          <p>Hola <b>$nomClient</b>,</p>
-          <p>La teva reserva ha estat confirmada correctament.</p>
-          <div style="background: #F0F2F5; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
-            <p style="margin:0; font-size: 10px; color: #778591; text-transform: uppercase;">Codi</p>
-            <h2 style="margin:5px 0; color: #FF700A; letter-spacing: 8px; font-size: 32px;">$codiUnic</h2>
-          </div>
-          <p style="font-size: 14px; color: #2D3142;">
-            <b>📍 Recollida:</b> ${_origenController.text}<br>
-            <b>🏁 Destí:</b> ${_destiController.text}<br>
-            <b>📅 Data:</b> ${DateFormat('dd/MM/yyyy').format(_selectedDate)} a les ${_selectedTime.format(context)}
-          </p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 11px; color: #778591; text-align: center;">© 2026 OnlyTransfer Luxury Transport.</p>
-        </div>
-      ''',
-      }
-    };
+    setState(() => _processant = true);
 
     try {
-      await ReservaService.gravarReserva(
-        dadesReserva: dadesReserva,
-      );
-
+      await _gravarReservaAFirebase();
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _pasActual = 4);
-    } catch (error) {
-      debugPrint("🚨 Error Firebase: $error");
-      rethrow;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processant = false);
+      }
     }
+  }
+
+  Future<void> _gravarReservaAFirebase() async {
+    final int numPax = int.tryParse(_paxController.text) ?? 1;
+    final int numMaletes = int.tryParse(_maletesController.text) ?? 0;
+    final String codiUnic = _generarCodiReservaNetejat();
+
+    final String mailClient = _mailClientController.text.trim();
+    final String nomClient = _nomClientController.text.trim().isEmpty
+        ? _personaContacteController.text.trim()
+        : _nomClientController.text.trim();
+    final String vol = _volController.text.trim().isEmpty
+        ? "No indicat"
+        : _volController.text.trim();
+    final String sign = _welcomeSignController.text.trim().isEmpty
+        ? nomClient
+        : _welcomeSignController.text.trim();
+
+    final DateTime dataServei = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+
+    final Map<String, dynamic> dadesReserva = {
+      // IDENTITAT DEL SERVEI
+      'codi_reserva': codiUnic,
+      'tipus_client': 'corporatiu',
+      'tipus_pagament': 'empresa',
+      'estat_pagament': 'PENDENT_TRANSFERENCIA',
+      'estat_servei': 'pendent_assignar',
+
+      // CONTACTE DEL PASSATGER / CLIENT FINAL
+      'client': nomClient,
+      'email': mailClient,
+      'telefon': _telClientController.text.trim(),
+      'welcome_sign': sign,
+
+      // EMPRESA
+      'nom_empresa': _nomEmpresaController.text.trim(),
+      'persona_contacte': _personaContacteController.text.trim(),
+      'email_empresa': _emailEmpresaController.text.trim(),
+      'telefon_empresa': _telefonEmpresaController.text.trim(),
+      'referencia_empresa': _referenciaInternaController.text.trim(),
+      'observacions_facturacio': _obsFacturacioController.text.trim(),
+
+      // SERVEI
+      'data': DateFormat('dd/MM/yyyy').format(_selectedDate),
+      'hora': _selectedTime.format(context),
+      'data_servei_ts': Timestamp.fromDate(dataServei),
+      'origen': _origenController.text.trim(),
+      'desti': _destiController.text.trim(),
+      'ciutat': 'Barcelona',
+      'pax': numPax.toString(),
+      'maletes': numMaletes.toString(),
+      'vol_tren': vol,
+      'observacions': _obsController.text.trim(),
+      'vehicle_tipus':
+          (numPax >= 3 || numMaletes >= 3) ? "VAN Executive" : "Sedan Luxe",
+      'import':
+          (numPax >= 3 || numMaletes >= 3) ? "185.00" : "125.00",
+
+      // OPERATIVA
+      'conductor_id': '',
+      'pagat_conductor': false,
+      'data_pagament_conductor': null,
+      'creat_el': FieldValue.serverTimestamp(),
+
+      // LOGÍSTICA
+      'log_1': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
+      'log_2': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
+      'log_3': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
+      'log_4': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
+      'log_5': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
+      'log_6': {'fet': false, 'hora': '', 'lat': 0.0, 'lng': 0.0},
+    };
+
+    await ReservaService.gravarReserva(dadesReserva: dadesReserva);
+
+    if (!mounted) return;
+    setState(() => _pasActual = 4);
   }
 
   @override
@@ -161,7 +191,6 @@ final dadesReserva = {
       backgroundColor: colorFonsBlanc,
       appBar: AppBar(
         title: const Text(
-          'ONLY TRANSFER',
           'RESERVA CORPORATIVA',
           style: TextStyle(
             color: colorGrisNegre,
@@ -193,7 +222,7 @@ final dadesReserva = {
       case 2:
         return _pantallaResum();
       case 3:
-        return _pantallaIdentificacio();
+        return _pantallaIdentificacioEmpresa();
       case 4:
         return _pantallaGracies();
       default:
@@ -201,23 +230,21 @@ final dadesReserva = {
     }
   }
 
-  // --- PANTALLES ---
-
   Widget _pantallaSeleccio() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.airplanemode_active, color: colorTaronjaVIP, size: 40),
+          const Icon(Icons.business, color: colorTaronjaVIP, size: 40),
           const Text(
-            "TRANSFER",
+            "CORPORATIU",
             style: TextStyle(fontSize: 10, color: colorTaronjaVIP),
           ),
           const SizedBox(height: 60),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: _botoAccio(
-              "NOVA RESERVA",
+              "NOVA RESERVA CORPORATIVA",
               () => setState(() => _pasActual = 1),
             ),
           ),
@@ -231,9 +258,17 @@ final dadesReserva = {
       padding: const EdgeInsets.all(25),
       child: Column(
         children: [
-          _campPredictiu(_origenController, "Recollida", Icons.location_on_outlined),
+          _campPredictiu(
+            _origenController,
+            "Recollida",
+            Icons.location_on_outlined,
+          ),
           const SizedBox(height: 15),
-          _campPredictiu(_destiController, "Destinació", Icons.flag_outlined),
+          _campPredictiu(
+            _destiController,
+            "Destinació",
+            Icons.flag_outlined,
+          ),
           const SizedBox(height: 15),
           Row(
             children: [
@@ -255,7 +290,11 @@ final dadesReserva = {
             ],
           ),
           const SizedBox(height: 15),
-          _campBlanc(_volController, "Número de Vol / Tren", Icons.flight_takeoff),
+          _campBlanc(
+            _volController,
+            "Número de Vol / Tren",
+            Icons.flight_takeoff,
+          ),
           const SizedBox(height: 15),
           _campBlanc(
             _welcomeSignController,
@@ -285,9 +324,16 @@ final dadesReserva = {
             ],
           ),
           const SizedBox(height: 15),
-          _campBlanc(_obsController, "Observacions VIP", Icons.chat_bubble_outline),
+          _campBlanc(
+            _obsController,
+            "Observacions operatives",
+            Icons.chat_bubble_outline,
+          ),
           const SizedBox(height: 30),
-          _botoAccio("CONTINUAR", () => setState(() => _pasActual = 2)),
+          _botoAccio(
+            "CONTINUAR",
+            () => setState(() => _pasActual = 2),
+          ),
         ],
       ),
     );
@@ -316,9 +362,17 @@ final dadesReserva = {
             ),
             child: Column(
               children: [
-                _filaResum(Icons.location_on_outlined, "Origen", _origenController.text),
+                _filaResum(
+                  Icons.location_on_outlined,
+                  "Origen",
+                  _origenController.text,
+                ),
                 const Divider(height: 30),
-                _filaResum(Icons.flag_outlined, "Destí", _destiController.text),
+                _filaResum(
+                  Icons.flag_outlined,
+                  "Destí",
+                  _destiController.text,
+                ),
                 const Divider(height: 30),
                 _filaResum(
                   Icons.calendar_today,
@@ -330,7 +384,7 @@ final dadesReserva = {
           ),
           const SizedBox(height: 30),
           _botoAccio(
-            "CONFIRMAR I IDENTIFICAR-ME",
+            "CONTINUAR",
             () => setState(() => _pasActual = 3),
           ),
         ],
@@ -338,10 +392,11 @@ final dadesReserva = {
     );
   }
 
-  Widget _pantallaIdentificacio() {
-    int numPax = int.tryParse(_paxController.text) ?? 1;
-    int numMaletes = int.tryParse(_maletesController.text) ?? 0;
-    String preuFinal = (numPax >= 3 || numMaletes >= 3) ? "185,00 €" : "125,00 €";
+  Widget _pantallaIdentificacioEmpresa() {
+    final int numPax = int.tryParse(_paxController.text) ?? 1;
+    final int numMaletes = int.tryParse(_maletesController.text) ?? 0;
+    final String preuFinal =
+        (numPax >= 3 || numMaletes >= 3) ? "185,00 €" : "125,00 €";
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(25),
@@ -349,7 +404,7 @@ final dadesReserva = {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "DADES DE FACTURACIÓ",
+            "DADES EMPRESA",
             style: TextStyle(
               color: colorTaronjaVIP,
               fontWeight: FontWeight.bold,
@@ -357,19 +412,44 @@ final dadesReserva = {
             ),
           ),
           const SizedBox(height: 20),
-          _campBlanc(_nomClientController, "Nom Complet / Empresa", Icons.person_outline),
-          const SizedBox(height: 10),
-          _campBlanc(_mailClientController, "Correu per rebre el tiquet", Icons.alternate_email),
+          _campBlanc(
+            _nomEmpresaController,
+            "Nom empresa",
+            Icons.business_outlined,
+          ),
           const SizedBox(height: 10),
           _campBlanc(
-            _telClientController,
-            "Telèfon",
-            Icons.phone_android_outlined,
-            esNumber: true,
+            _personaContacteController,
+            "Persona de contacte",
+            Icons.person_outline,
+          ),
+          const SizedBox(height: 10),
+          _campBlanc(
+            _emailEmpresaController,
+            "Correu empresa",
+            Icons.alternate_email,
+          ),
+          const SizedBox(height: 10),
+          _campBlanc(
+            _telefonEmpresaController,
+            "Telèfon empresa",
+            Icons.phone_outlined,
+          ),
+          const SizedBox(height: 10),
+          _campBlanc(
+            _referenciaInternaController,
+            "Referència empresa",
+            Icons.badge_outlined,
+          ),
+          const SizedBox(height: 10),
+          _campBlanc(
+            _obsFacturacioController,
+            "Observacions facturació",
+            Icons.receipt_long_outlined,
           ),
           const SizedBox(height: 30),
           const Text(
-            "PAGAMENT SEGUR",
+            "DADES PASSATGER",
             style: TextStyle(
               color: colorTaronjaVIP,
               fontWeight: FontWeight.bold,
@@ -377,15 +457,22 @@ final dadesReserva = {
             ),
           ),
           const SizedBox(height: 15),
-          Container(
-            padding: const EdgeInsets.all(15),
-            decoration: BoxDecoration(
-              color: colorGrisClarBackground,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: CardFormField(
-              style: CardFormStyle(fontSize: 14),
-            ),
+          _campBlanc(
+            _nomClientController,
+            "Nom passatger / client final",
+            Icons.person_pin_outlined,
+          ),
+          const SizedBox(height: 10),
+          _campBlanc(
+            _mailClientController,
+            "Correu passatger",
+            Icons.mail_outline,
+          ),
+          const SizedBox(height: 10),
+          _campBlanc(
+            _telClientController,
+            "Telèfon passatger",
+            Icons.phone_android_outlined,
           ),
           const SizedBox(height: 30),
           Container(
@@ -400,7 +487,7 @@ final dadesReserva = {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      "IMPORT TOTAL",
+                      "IMPORT ESTIMAT",
                       style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                     Text(
@@ -413,10 +500,18 @@ final dadesReserva = {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Pagament per transferència / acord empresa",
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
                 const SizedBox(height: 20),
                 _processant
                     ? const CircularProgressIndicator(color: colorTaronjaVIP)
-                    : _botoAccio("SOL·LICITAR SERVEI", _crearReservaCorporativa),
+                    : _botoAccio(
+                        "SOL·LICITAR SERVEI",
+                        _crearReservaCorporativa,
+                      ),
               ],
             ),
           ),
@@ -430,46 +525,35 @@ final dadesReserva = {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.check_circle_outline, color: colorTaronjaVIP, size: 80),
+          const Icon(
+            Icons.check_circle_outline,
+            color: colorTaronjaVIP,
+            size: 80,
+          ),
           const SizedBox(height: 20),
           const Text(
-            "PAGAMENT COMPLETAT",
+            "SOL·LICITUD CORPORATIVA ENVIADA",
+            textAlign: TextAlign.center,
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 15),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 30),
+            child: Text(
+              "La reserva ha quedat registrada correctament i pendent de gestió administrativa.",
+              textAlign: TextAlign.center,
+            ),
+          ),
           const SizedBox(height: 40),
-          _botoGris("TORNAR A L'INICI", Icons.home, () => setState(() => _pasActual = 0)),
+          _botoGris(
+            "TORNAR A L'INICI",
+            Icons.home,
+            () => setState(() => _pasActual = 0),
+          ),
         ],
       ),
     );
   }
-Future<void> _crearReservaCorporativa() async {
-  if (_nomClientController.text.isEmpty || _mailClientController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Omple nom i correu"),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-
-  setState(() => _processant = true);
-
-  try {
-    await _gravarReservaAFirebase();
-
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error: $e"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    setState(() => _processant = false);
-  }
-}
-  // --- COMPONENTS ---
 
   Widget _filaResum(IconData icon, String titol, String valor) {
     return Row(
@@ -509,7 +593,7 @@ Future<void> _crearReservaCorporativa() async {
         if (pattern.length < 3) return [];
 
         const String apiKey = "AIzaSyA3yvNuaRTFJgRcRK0m5eu8_1cMquTRKrM";
-        final url =
+        final String url =
             "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$pattern&key=$apiKey&types=establishment|geocode&language=en";
 
         final response = await http.get(Uri.parse(url));
@@ -525,14 +609,12 @@ Future<void> _crearReservaCorporativa() async {
         return [];
       },
       onSelected: (suggestion) => setState(() => ctrl.text = suggestion),
-      itemBuilder: (context, suggestion) {
-        return ListTile(
-          title: Text(
-            suggestion,
-            style: const TextStyle(fontSize: 12),
-          ),
-        );
-      },
+      itemBuilder: (context, suggestion) => ListTile(
+        title: Text(
+          suggestion,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ),
       builder: (context, controller, focusNode) {
         if (controller.text != ctrl.text) {
           controller.text = ctrl.text;
@@ -565,7 +647,10 @@ Future<void> _crearReservaCorporativa() async {
       fillColor: colorGrisClarBackground,
       prefixIcon: Icon(icon, color: colorGrisFosc, size: 18),
       hintText: hint,
-      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+      contentPadding: const EdgeInsets.symmetric(
+        vertical: 12,
+        horizontal: 15,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -618,7 +703,7 @@ Future<void> _crearReservaCorporativa() async {
   }
 
   void _triarData() async {
-    DateTime? p = await showDatePicker(
+    final DateTime? p = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime.now(),
@@ -630,7 +715,7 @@ Future<void> _crearReservaCorporativa() async {
   }
 
   void _triarHora() async {
-    TimeOfDay? p = await showTimePicker(
+    final TimeOfDay? p = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
     );
@@ -648,10 +733,18 @@ Future<void> _crearReservaCorporativa() async {
     _maletesController.dispose();
     _obsController.dispose();
     _welcomeSignController.dispose();
+
     _nomClientController.dispose();
-    _dniClientController.dispose();
     _mailClientController.dispose();
     _telClientController.dispose();
+
+    _nomEmpresaController.dispose();
+    _personaContacteController.dispose();
+    _emailEmpresaController.dispose();
+    _telefonEmpresaController.dispose();
+    _referenciaInternaController.dispose();
+    _obsFacturacioController.dispose();
+
     super.dispose();
   }
 }
