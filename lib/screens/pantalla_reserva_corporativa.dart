@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import '../services/stripe_service.dart';
 import '../services/reserva_service.dart';
 
@@ -17,11 +16,11 @@ const Color colorGrisFosc = Color(0xFF556677);
 const Color colorGrisNegre = Color(0xFF2D3142);
 const Color colorGrisClarBackground = Color(0xFFF0F2F5);
 
-class ExperienciaClient extends StatefulWidget {
+class PantallaReservaCorporativa extends StatefulWidget{
   const ExperienciaClient({super.key});
 
   @override
-  State<ExperienciaClient> createState() => _ExperienciaClientState();
+ State<PantallaReservaCorporativa> createState() => _ExperienciaClientState();
 }
 
 class _ExperienciaClientState extends State<ExperienciaClient> {
@@ -53,39 +52,6 @@ class _ExperienciaClientState extends State<ExperienciaClient> {
     ).join();
   }
 
-  Future<void> _executarPagamentDirecte() async {
-    if (_nomClientController.text.isEmpty || _mailClientController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Si us plau, omple el nom i el correu"),
-          backgroundColor: colorTaronjaVIP,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _processant = true);
-
-    try {
-      await StripeService.executarPagamentDirecte(
-        nomClient: _nomClientController.text,
-      );
-
-      await _gravarReservaAFirebase();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _processant = false);
-      }
-    }
-  }
 
   Future<void> _gravarReservaAFirebase() async {
     int numPax = int.tryParse(_paxController.text) ?? 1;
@@ -126,7 +92,10 @@ final dadesReserva = {
 
   // ECONÒMIC
   'import': (numPax >= 3 || numMaletes >= 3) ? "185.00" : "125.00",
-  'estat_pagament': 'PAGAT',
+  'tipus_client': 'corporatiu', 
+  'tipus_pagament': 'empresa',  
+  'estat_pagament': 'PENDENT_TRANSFERENCIA',
+  'nom_empresa': _nomClientController.text,
 
   // SERVEI
   'estat_servei': 'pendent_assignar',
@@ -193,6 +162,7 @@ final dadesReserva = {
       appBar: AppBar(
         title: const Text(
           'ONLY TRANSFER',
+          'RESERVA CORPORATIVA',
           style: TextStyle(
             color: colorGrisNegre,
             letterSpacing: 2,
@@ -446,7 +416,7 @@ final dadesReserva = {
                 const SizedBox(height: 20),
                 _processant
                     ? const CircularProgressIndicator(color: colorTaronjaVIP)
-                    : _botoAccio("PAGAR ARA", _executarPagamentDirecte),
+                    : _botoAccio("SOL·LICITAR SERVEI", _crearReservaCorporativa),
               ],
             ),
           ),
@@ -472,7 +442,33 @@ final dadesReserva = {
       ),
     );
   }
+Future<void> _crearReservaCorporativa() async {
+  if (_nomClientController.text.isEmpty || _mailClientController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Omple nom i correu"),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
 
+  setState(() => _processant = true);
+
+  try {
+    await _gravarReservaAFirebase();
+
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() => _processant = false);
+  }
+}
   // --- COMPONENTS ---
 
   Widget _filaResum(IconData icon, String titol, String valor) {
