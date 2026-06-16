@@ -4,7 +4,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 
 // Importem la teva pantalla i el main per a la funció t()
 import 'pantalla_confirmacio.dart'; 
-import 'main.dart'; 
+import '../main.dart'; 
 
 class PantallaClientWeb extends StatefulWidget {
   const PantallaClientWeb({super.key});
